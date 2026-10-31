@@ -16,9 +16,13 @@ export default function History() {
   useEffect(() => { api("/history").then(setItems).catch(() => setItems([])); }, [api]);
 
   const remove = async (id) => {
-    await api(`/history/${id}`, { method: "DELETE" });
-    setItems((s) => s.filter((x) => x.id !== id));
-    toast.success("Silindi");
+    try {
+      await api(`/history/${id}`, { method: "DELETE" });
+      setItems((s) => s.filter((x) => x.id !== id));
+      toast.success("Silindi");
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
   const shown = (items || []).filter((x) => filter === "all" || x.tool === filter);
 

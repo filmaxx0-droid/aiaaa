@@ -1,0 +1,41 @@
+{
+  "summary": "First e2e run of Kazandıran. Backend: 16/16 pytest pass (auth 401s, /me upsert with 5 credits, SSE generate start/delta/done with Claude ~15-25s, credit deduct, history list/detail/delete, cross-user 404 isolation, 402 at 0 credits, unknown tool 400 without charge, /packs enabled:false, /payments/initialize 503). Frontend: landing (hero tabs switch, 3 tools, 3 pricing cards, FAQ accordion), signed-out redirects of /panel,/gecmis,/kredi,/arac/listing to /sign-in, Clerk ticket sign-in, dashboard credit badge/banner/tool cards, session survives reload, listing generation streams into output-text with credit 5->4, copy/download/regenerate buttons present, copy writes the raw markdown to the clipboard, history row and detail, /kredi disabled notice with disabled buy buttons, 0-credit submit redirects to /kredi, required-field validation toast, sign-out, mobile 390px with no horizontal overflow. No functional bugs found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/generate", "issue": "Credit is charged before streaming. If the client disconnects mid-stream, asyncio.CancelledError/GeneratorExit is a BaseException and is not caught by 'except Exception', so the user loses 1 credit and nothing is saved to history."},
+      {"endpoint": "current_member (all auth endpoints)", "issue": "On first login, if the Clerk email lookup (_clerk_email) fails, raise_for_status surfaces as an unhandled 500. A clean 502/503 with a retry message would be better."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "History delete", "issue": "History.remove has no try/catch, so a failed DELETE leaves an unhandled promise rejection and shows no error toast.", "affected_selectors": ["history-delete-{id}"]}
+    ],
+    "design_issues": [
+      {"screen": "Landing navbar mobile 390px", "issues": ["'Giriş yap' and 'Ücretsiz başla' wrap onto 2 lines; add whitespace-nowrap or shorten/hide one CTA on mobile"]},
+      {"screen": "Sign-in / Clerk widget", "issues": ["Clerk UI is in English ('Continue to Kazandıran', 'Email address', 'Sign out') in an otherwise Turkish app; use @clerk/localizations trTR"]},
+      {"screen": "Post sign-in / sign-out", "issues": ["After ticket sign-in the user lands on '/' instead of '/panel'; after sign-out from a protected page the user lands on /sign-in rather than the landing page (minor)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_kazandiran_api.py", "/app/backend/tests/conftest.py", "/app/backend/tests/make_ticket.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: catch BaseException/CancelledError in the generate stream to refund the credit on client disconnect, or save partial output",
+    "Optional: add Turkish localization to Clerk (trTR)",
+    "Optional: whitespace-nowrap on mobile navbar buttons",
+    "Optional: add error handling to History delete"
+  ],
+  "critical_code_review_comments": [
+    "Generate refund path misses client-disconnect cancellation (BaseException)",
+    "_clerk_email failure gives a 500 on first login",
+    "payments.py: the callback flow and signature verification look correct (HMAC check, amount/basket match, idempotent pending->paid). It was not exercised because iyzico keys are missing (expected).",
+    "Model string 'claude-sonnet-5-5' works with the Emergent key (generation succeeded)"
+  ],
+  "updated_files": ["/app/backend/tests/conftest.py", "/app/backend/tests/test_kazandiran_api.py", "/app/backend/tests/make_ticket.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "tester+clerk_test@example.com (user_3LSQPvRkN6Cf1FQJSOieUwTbbyE) from /app/memory/test_credentials.md. Credits restored to 5 after testing.",
+  "seed_data_creation": "Temporary Clerk user testb*+clerk_test@example.com is created per run and deleted at teardown. TEST_ generations were deleted from Mongo.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run the backend tests serially: 'cd /app/backend/tests && pytest -n 0 -v'. xdist parallel runs collide on shared user A credits. conftest loads CLERK_SECRET_KEY via dotenv without printing it. 'python /app/backend/tests/make_ticket.py' resets user A to 5 credits and prints a one-time sign-in ticket for <preview>/sign-in?__clerk_ticket=... Payments are disabled until iyzico keys are added; once they are, test /kredi billing-dialog -> /api/payments/initialize -> sandbox checkout -> /odeme/sonuc."
+}

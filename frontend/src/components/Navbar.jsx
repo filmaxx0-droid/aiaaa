@@ -44,9 +44,9 @@ export default function Navbar({ landing }) {
           )}
           <Show when="signed-out">
             <SignInButton>
-              <button data-testid="nav-sign-in-btn" className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900">Giriş yap</button>
+              <button data-testid="nav-sign-in-btn" className="hidden whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 sm:block">Giriş yap</button>
             </SignInButton>
-            <Link to="/sign-up" data-testid="nav-sign-up-btn" className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">Ücretsiz başla</Link>
+            <Link to="/sign-up" data-testid="nav-sign-up-btn" className="whitespace-nowrap rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">Ücretsiz başla</Link>
           </Show>
           <Show when="signed-in">
             {landing && <Link to="/panel" data-testid="nav-btn-dashboard" className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Panele git</Link>}

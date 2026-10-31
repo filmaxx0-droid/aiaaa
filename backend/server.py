@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -51,7 +52,10 @@ async def current_member(user: dict = Depends(require_user)) -> dict:
     uid = user["user_id"]
     member = await db.users.find_one({"user_id": uid}, {"_id": 0})
     if member is None:
-        email = await run_in_threadpool(_clerk_email, uid)
+        try:
+            email = await run_in_threadpool(_clerk_email, uid)
+        except requests.RequestException:
+            raise HTTPException(503, "Hesap bilgisi alınamadı, lütfen tekrar deneyin")
         member = await db.users.find_one_and_update(
             {"user_id": uid},
             {"$setOnInsert": {"user_id": uid, "email": email, "credits": FREE_CREDITS,
@@ -107,6 +111,10 @@ async def generate(body: GenerateIn, member: dict = Depends(current_member)):
                 "id": gen_id, "user_id": uid, "tool": body.tool, "title": title, "input": body.data,
                 "output": text, "created_at": datetime.now(timezone.utc).isoformat()})
             yield f"data: {json.dumps({'type': 'done', 'id': gen_id})}\n\n"
+        except (asyncio.CancelledError, GeneratorExit):  # client left mid-stream: refund
+            asyncio.get_running_loop().create_task(
+                db.users.update_one({"user_id": uid}, {"$inc": {"credits": 1}}))
+            raise
         except Exception as e:  # refund on failure
             logger.exception("generation failed: %s", e)
             await db.users.update_one({"user_id": uid}, {"$inc": {"credits": 1}})

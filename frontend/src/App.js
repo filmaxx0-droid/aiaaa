@@ -30,7 +30,7 @@ function App() {
       <ClerkAuthProvider>
         <CreditsProvider>
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<><Show when="signed-in"><Navigate to="/panel" replace /></Show><Show when="signed-out"><Landing /></Show></>} />
             <Route path="/sign-in/*" element={<AuthPage mode="in" />} />
             <Route path="/sign-up/*" element={<AuthPage mode="up" />} />
             <Route element={<Protected />}>
